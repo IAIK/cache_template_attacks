@@ -1,0 +1,6 @@
+*.o
+spy
+victim
+*~
+core
+calibration
