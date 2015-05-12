@@ -93,9 +93,18 @@ make
 sleep 5; ./spy 200 7fc963a05000-7fc963ab4000 r-xp 00000000 fc:01 2637370                    /usr/lib/x86_64-linux-gnu/libgdk-3.so.0.1200.2 > libgdk.csv
 ```
 
+## OpenSSL AES T-Table attack
+This example requires a self-compiled OpenSSL library to enable it's T-Table-based AES implementation.
+Place libcrypto.so in the same folder and make sure the program actually uses it as a shared library.
+Then run
 ```
-cd profiling/generic_low_frequency_example
+cd profiling/aes_example
 make
-sleep 5; ./spy 200 7fc963a05000-7fc963ab4000 r-xp 00000000 fc:01 2637370                    /usr/lib/x86_64-linux-gnu/libgdk-3.so.0.1200.2 > libgdk.csv
+./spy
 ```
+The T-Table is easily locatable in the log file as there are only 64 addresses which are frequently accessed, but not always accessed.
+Subsequently, you can monitor addresses from the profile to derive information about secret keys.
+
+## Fully automated attack
+In this example we will run a script which will automatically execute the profiling phase as described before and then switch to the multi_spy exploitation tool as soon as a result is available.
 
