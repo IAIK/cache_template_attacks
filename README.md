@@ -107,6 +107,7 @@ make
 The T-Table is easily locatable in the log file as there are only 64 addresses which are frequently accessed, but not always accessed.
 Subsequently, you can monitor addresses from the profile to derive information about secret keys.
 
-## Fully automated attack
+## Fully automated attack (not yet online)
 In this example we will run a script which will automatically execute the profiling phase as described before and then switch to the multi_spy exploitation tool as soon as a result is available.
 
+... This part is not yet online, I am cleaning up the code mess and deciding which parts I can put online ...
