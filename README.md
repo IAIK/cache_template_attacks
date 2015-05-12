@@ -21,6 +21,7 @@ make
 ./calibration
 ```
 This program should print a histogram for cache hits and cache misses. Based on the histogram it suggests a suitable threshold value (this value is also returned by the program).
+
 **Note:** In most programs I defined a constant MIN_CACHE_MISS_CYCLES. Change it based on your threshold, if necessary.
 
 ## Getting started: Keypresses (with libxdotool)
@@ -32,20 +33,30 @@ Therefore, we will first find the address range to attack.
 $ cat /proc/`ps -A | grep gedit | grep -oE "^[0-9]+"`/maps | grep r-x | grep gdk-3
 7fc963a05000-7fc963ab4000 r-xp 00000000 fc:01 2637370                    /usr/lib/x86_64-linux-gnu/libgdk-3.so.0.1200.2
 ```
-We do not care about the virtual addresses, but only the size of the address range and the offset in the file (which is 00000000 in this example).
-**Note:** This is also the reason why we don't have to think about address space layout randomization.
+We do not care about the virtual addresses, but only the size of the address range and the offset in the file (which is 00000000 in this example). This is also the reason why we don't have to think about address space layout randomization.
+
+**Note:** On Windows you can use the tool vmmap to find the same information.
 
 This line can directly be passed to the profiling tool in the following step. We will create a Cache Template in this step. Using the libxdo library. Be sure to install it before trying this.
 
 **Note:** There is a second version which runs without libxdo, but then you have to issue the events by some other means.
 
 During the profiling we will simulate a huge number of key presses. Therefore, your test system will probably not be usable for a few minutes to hours. Switch to an already opened gedit window before ./spy is started.
+On Linux, run the following lines:
 ```
 cd profiling/linux_low_frequency_example
 make
 echo "switch to gedit window"
 sleep 5; ./spy 200 7fc963a05000-7fc963ab4000 r-xp 00000000 fc:01 2637370                    /usr/lib/x86_64-linux-gnu/libgdk-3.so.0.1200.2 > libgdk.csv
 ```
+On Windows with MSYS/MinGW, run the following lines:
+```
+cd profiling/windows_low_frequency_example
+mingw32-make
+echo "switch to notepad window"
+sleep 5; ./spy 200 C:\Windows\System32\notepad.exe > notepad.csv
+```
+
 The resulting log file is in a format which can be parsed by LibreOffice Calc or similar software.
 You can analyze information leakage through the cache using this log file.
 
@@ -65,10 +76,26 @@ make
 ./spy /usr/lib/x86_64-linux-gnu/libgdk-3.so.0.1200.2 0x85ec0
 ```
 Now this tool prints a message exactly when a user presses N (in any GTK3 window).
+This spy tool can also be used on Windows just like that.
 
 ## Getting started: Keypresses (without libxdotool)
 Without libxdotool we can use the generic low frequency profiling tool.
 This tool requires you to generate the events somehow. Depending on what you want to profile this can be another program simulating key strokes, a jammed key, a program which constantly triggers the event to exploit (an encryption...).
 In our case we will just jam a key and create a Cache Template showing which addresses react on key strokes. To filter false positive cache hits we should then perform a second profiling scan without jamming a key.
 
+**Note:** Cache Template Attacks can be fully automated, but this requires the event to be automated as well. In the previous example we used libxdotool for this purpose.
+
+On Windows or OSX you might not have procfs to retrieve the shared library mappings.
+However, on Windows there is vmmap which gives you the same information and on OSX you can use at least ldd and scan the binary itself. Therefore, we execute the generic example tool similar as before:
+```
+cd profiling/generic_low_frequency_example
+make
+sleep 5; ./spy 200 7fc963a05000-7fc963ab4000 r-xp 00000000 fc:01 2637370                    /usr/lib/x86_64-linux-gnu/libgdk-3.so.0.1200.2 > libgdk.csv
+```
+
+```
+cd profiling/generic_low_frequency_example
+make
+sleep 5; ./spy 200 7fc963a05000-7fc963ab4000 r-xp 00000000 fc:01 2637370                    /usr/lib/x86_64-linux-gnu/libgdk-3.so.0.1200.2 > libgdk.csv
+```
 
