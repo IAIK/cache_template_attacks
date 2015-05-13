@@ -38,7 +38,7 @@ make
 The resulting log file is in a format which can be parsed by LibreOffice Calc or similar software.
 You can analyze information leakage through the cache using this log file.
 
-## Getting started: Keypresses (with libxdotool)
+## In detail: Keypresses (with libxdotool)
 In this example we perform some steps by hand to illustrate what happens in the background.
 Therefore, we will first find the address range to attack.
 ```
@@ -88,7 +88,7 @@ make
 Now this tool prints a message exactly when a user presses N (in any GTK3 window).
 This spy tool can also be used on Windows just like that.
 
-## Getting started: Keypresses (without libxdotool)
+## In detail: Keypresses (without libxdotool)
 Without libxdotool we can use the generic low frequency profiling tool.
 This tool requires you to generate the events somehow. Depending on what you want to profile this can be another program simulating key strokes, a jammed key, a program which constantly triggers the event to exploit (an encryption...).
 In our case we will just jam a key and create a Cache Template showing which addresses react on key strokes. To filter false positive cache hits we should then perform a second profiling scan without jamming a key.
