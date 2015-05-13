@@ -107,6 +107,8 @@ make
 The T-Table is easily locatable in the log file as there are only 64 addresses which are frequently accessed, but not always accessed.
 Subsequently, you can monitor addresses from the profile to derive information about secret keys.
 
+In the exploitation phase the spy tool has to trigger encryptions itself with an unknown key and can then trivially determine the upper 4 bits of each key byte after about 64 encryptions.
+
 ## Fully automated attack
 In this example we will run a script which will automatically execute the profiling phase as described before and then switch to the multi_spy exploitation tool as soon as a result is available.
 
