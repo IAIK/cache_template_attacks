@@ -26,10 +26,20 @@ This program should print a histogram for cache hits and cache misses. Based on 
 
 **Note:** In most programs I defined a constant MIN_CACHE_MISS_CYCLES. Change it based on your threshold, if necessary.
 
-## Getting started: Keypresses (with libxdotool)
+## Getting started: Automated keypress profiling
 It is helpful to start with well observable events like key strokes and an application which is known to process such events (for instance an editor). You find the profiling tools in the profiling folder.
 
-In this example we perform some steps by hand to illustrate how Cache Template Attacks work.
+Run the following commands to find keypress information leakage in a program (the program should be running and it should have focus as soon as you started the spy script):
+```
+cd profiling/linux_low_frequency_example
+make
+./spy.sh 5 200 gedit # in our example we profile keypresses in gedit
+```
+The resulting log file is in a format which can be parsed by LibreOffice Calc or similar software.
+You can analyze information leakage through the cache using this log file.
+
+## Getting started: Keypresses (with libxdotool)
+In this example we perform some steps by hand to illustrate what happens in the background.
 Therefore, we will first find the address range to attack.
 ```
 $ cat /proc/`ps -A | grep gedit | grep -oE "^[0-9]+"`/maps | grep r-x | grep gdk-3
@@ -61,8 +71,6 @@ sleep 5; ./spy 200 C:\Windows\System32\notepad.exe > notepad.csv
 
 The resulting log file is in a format which can be parsed by LibreOffice Calc or similar software.
 You can analyze information leakage through the cache using this log file.
-
-**Note:** The spy.sh script does this part automatically, it profiles all shared libraries and binary files loaded by the program under attack (for instance gedit).
 
 You are generally looking for events which have single high peaks, like the following:
 ```
@@ -108,6 +116,8 @@ The T-Table is easily locatable in the log file as there are only 64 addresses w
 Subsequently, you can monitor addresses from the profile to derive information about secret keys.
 
 In the exploitation phase the spy tool has to trigger encryptions itself with an unknown key and can then trivially determine the upper 4 bits of each key byte after about 64 encryptions.
+
+Of course, we know that OpenSSL does not use a T-Table-based AES implementation anymore. But you can use this tool to profile any (possibly closed-source) binary to find whether it contains a crypto algorithm which leaks key dependent information through the cache. Just trigger the algorithm execution with fixed keys 
 
 ## Fully automated attack
 In this example we will run a script which will automatically execute the profiling phase as described before and then switch to the multi_spy exploitation tool as soon as a result is available.
