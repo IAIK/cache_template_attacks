@@ -5,7 +5,7 @@ Cache Template Attacks are a new generic attack technique, allowing to profile a
 
 The underlying cache attack used in this repository is Flush+Reload as presented by Yarom and Falkner in "[FLUSH+RELOAD: a High Resolution, Low Noise, L3 Cache Side-Channel Attack](https://eprint.iacr.org/2013/448.pdf)" (2014).
 
-The "[Cache Template Attacks]()" paper will be published soon.
+The "[Cache Template Attacks]()" paper by Gruss, Spreitzer and Mangard will be published soon.
 
 ## One note before starting
 
@@ -107,7 +107,27 @@ make
 The T-Table is easily locatable in the log file as there are only 64 addresses which are frequently accessed, but not always accessed.
 Subsequently, you can monitor addresses from the profile to derive information about secret keys.
 
-## Fully automated attack (not yet online)
+## Fully automated attack
 In this example we will run a script which will automatically execute the profiling phase as described before and then switch to the multi_spy exploitation tool as soon as a result is available.
 
-... This part is not yet online, I am cleaning up the code mess and deciding which parts I can put online ...
+Then run
+```
+cd exploitation/multi_spy
+make
+cd ../../profiling/linux_low_frequency_automated
+./spy.sh 5 200 /usr/lib/x86_64-linux-gnu/libgdk-3.so.0.1200.2
+```
+The spy tool should switch into exploitation mode after profiling is completed. The result of the profiling phase is printed on the screen, for instance:
+```
+Events per address:
+ 0x85d00:q
+ 0x85d40:q
+ 0x85d80:ghijklnqtuvwz
+ 0x85dc0:iuzn
+ 0x85e00:iznuj
+ 0x85e40:inzu
+ 0x85e80:n
+ 0x85ec0:n
+```
+
+That's it, now it's up to you to find out which of your software leaks data and how it could be exploited. I hope it helps you closing these leaks.
