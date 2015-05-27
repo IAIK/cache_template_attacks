@@ -5,7 +5,7 @@ Cache Template Attacks are a new generic attack technique, allowing to profile a
 
 The underlying cache attack used in this repository is Flush+Reload as presented by Yarom and Falkner in "[FLUSH+RELOAD: a High Resolution, Low Noise, L3 Cache Side-Channel Attack](https://eprint.iacr.org/2013/448.pdf)" (2014).
 
-The "[Cache Template Attacks]()" paper by Gruss, Spreitzer and Mangard will be published soon.
+The "[Cache Template Attacks](https://www.usenix.org/conference/usenixsecurity15/technical-sessions/presentation/gruss)" paper by Gruss, Spreitzer and Mangard will be published soon.
 
 ## One note before starting
 
