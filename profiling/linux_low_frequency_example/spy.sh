@@ -21,7 +21,7 @@ while [[ $i -gt 0 ]]; do
   sleep 1
   i=$((i - 1))
 done
-mem=`sudo cat /proc/$pid/maps | grep "/" | grep -v "(deleted)" | grep -E "(so|locale)" | grep -E "(r-x|rw-|r--)"`
+mem=`cat /proc/$pid/maps | grep "/" | grep -v "(deleted)" | grep -E "(so|locale)" | grep -E "(r-x|rw-|r--)"`
 while read -r line; do
   #echo $line
   #echo ./spy $2 $line
