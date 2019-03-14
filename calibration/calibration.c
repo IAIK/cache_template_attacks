@@ -37,7 +37,7 @@ int main(int argc, char** argv)
     hit_histogram[MIN(79,d/5)]++;
     sched_yield();
   }
-  flush(array+1024);
+  flush(array+2*1024);
   for (int i = 0; i < 4*1024*1024; ++i)
   {
     size_t d = flushandreload(array+2*1024);
