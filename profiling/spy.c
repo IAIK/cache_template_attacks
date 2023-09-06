@@ -12,10 +12,10 @@
 #include <stdlib.h>
 #include <sched.h>
 #include <stdint.h>
-#include "../../cacheutils.h"
+#include "../cacheutils.h"
 
 // this number varies on different systems
-#define MIN_CACHE_MISS_CYCLES (155)
+size_t MIN_CACHE_MISS_CYCLES = 155;
 
 size_t flushandreload(void* addr, size_t duration)
 {
@@ -41,24 +41,26 @@ size_t flushandreload(void* addr, size_t duration)
 
 int main(int argc, char** argv)
 {
-  if (argc != 8)
-    exit(!fprintf(stderr,"  usage: ./spy <probeduration> <addressrange> <perms> <offset> <dev> <inode> <filename>\n"
-                 "example: ./spy 200             400000-489000  --    0        -- -- /usr/bin/gedit\n"));
+  if (argc != 9)
+    exit(!fprintf(stderr,"  usage: ./spy <threshold> <probeduration> <addressrange> <perms> <offset> <dev> <inode> <filename>\n"
+                 "example: ./spy 155 200             400000-489000  --    0        -- -- /usr/bin/gedit\n"));
+  MIN_CACHE_MISS_CYCLES = 155;
+  if (!sscanf(argv[1],"%lu",&MIN_CACHE_MISS_CYCLES))
+    exit(!printf("threshold error\n"));
   size_t duration = 0;
-  if (!sscanf(argv[1],"%lu",&duration))
+  if (!sscanf(argv[2],"%lu",&duration))
     exit(!printf("duration error\n"));
   unsigned char* start = 0;
   unsigned char* end = 0;
-  if (!sscanf(argv[2],"%p-%p",&start,&end))
+  if (!sscanf(argv[3],"%p-%p",&start,&end))
     exit(!printf("address range error\n"));
   size_t range = end - start;
   size_t offset = 0;
-  if (!sscanf(argv[4],"%lx",&offset))
+  if (!sscanf(argv[5],"%lx",&offset))
     exit(!printf("offset error\n"));
   char filename[4096];
-  if (!sscanf(argv[7],"%s",filename))
+  if (!sscanf(argv[8],"%s",filename))
     exit(!fprintf(stderr,"filename error\n"));
-  fprintf(stderr,"filename: %80s, offset: %8lx, duration: %luus, probes: %10lu\n",filename,offset,duration,range/64);
   if (duration == 0)
     exit(0);
 #ifdef _WIN32
@@ -70,25 +72,20 @@ int main(int argc, char** argv)
   unsigned char* addr = (unsigned char*)mmap(0, 64*1024*1024, PROT_READ, MAP_SHARED, fd, 0);
 #endif
   start = addr + offset;
+  fprintf(stderr,"sleep 2 seconds\n");
+  sleep(2);
   char j = 0;
   size_t count = 0;
-  printf("file,addr,hits\n");
-  size_t promille = 0;
+  printf("  done\t%*s\t    addr\t  hits\n",strlen(filename),"file");
  	for (size_t i = 0; i < range; i += 64)
   {
-    printf("%s,%8p,",filename,(void*)offset + i);
     for (size_t k = 0; k < 5; ++k)
       sched_yield();
     flush(start + i);
     for (size_t k = 0; k < 5; ++k)
       sched_yield();
     count = flushandreload(start + i, duration);
-    printf("%4ld\n",count);
-    if (1000 * i / range > promille)
-    {
-      promille = 1000 * i / range;
-      fprintf(stderr,"%ld/1000\n",promille);
-    }
+    printf("%6.2f\t%s\t%8p\t%6ld\n",100.0*(i+64) / range, filename,(void*)offset + i, count);
   }
   munmap(start,range);
   close(fd);

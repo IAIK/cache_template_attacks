@@ -4,6 +4,7 @@
 #include <sched.h>
 #include "../cacheutils.h"
 
+size_t scale = 10;
 size_t array[5*1024];
 
 size_t hit_histogram[80];
@@ -28,56 +29,28 @@ size_t flushandreload(void* addr)
 
 int main(int argc, char** argv)
 {
+  scale = 10;
+  if (argc != 1 && (argc != 2 || !sscanf(argv[1],"%lu",&scale)))
+    exit(!printf("usage: ./calibration [bucket size]\n"));
+
   memset(array,-1,5*1024*sizeof(size_t));
   maccess(array + 2*1024);
   sched_yield();
   for (int i = 0; i < 4*1024*1024; ++i)
   {
     size_t d = onlyreload(array+2*1024);
-    hit_histogram[MIN(79,d/5)]++;
+    hit_histogram[MIN(79,d/scale)]++;
     sched_yield();
   }
   flush(array+2*1024);
   for (int i = 0; i < 4*1024*1024; ++i)
   {
     size_t d = flushandreload(array+2*1024);
-    miss_histogram[MIN(79,d/5)]++;
+    miss_histogram[MIN(79,d/scale)]++;
     sched_yield();
   }
   printf(".\n");
-  size_t hit_max = 0;
-  size_t hit_max_i = 0;
-  size_t miss_min_i = 0;
   for (int i = 0; i < 80; ++i)
-  {
-    printf("%3d: %10zu %10zu\n",i*5,hit_histogram[i],miss_histogram[i]);
-    if (hit_max < hit_histogram[i])
-    {
-      hit_max = hit_histogram[i];
-      hit_max_i = i;
-    }
-    if (miss_histogram[i] > 3 && miss_min_i == 0)
-      miss_min_i = i;
-  }
-  if (miss_min_i > hit_max_i+4)
-    printf("Flush+Reload possible!\n");
-  else if (miss_min_i > hit_max_i+2)
-    printf("Flush+Reload probably possible!\n");
-  else if (miss_min_i < hit_max_i+2)
-    printf("Flush+Reload maybe not possible!\n");
-  else
-    printf("Flush+Reload not possible!\n");
-  size_t min = -1UL;
-  size_t min_i = 0;
-  for (int i = hit_max_i; i < miss_min_i; ++i)
-  {
-    if (min > (hit_histogram[i] + miss_histogram[i]))
-    {
-      min = hit_histogram[i] + miss_histogram[i];
-      min_i = i;
-    }
-  }
-  printf("The lower the threshold, the lower the number of false positives.\n");
-  printf("Suggested cache hit/miss threshold: %zu\n",min_i * 5);
-  return min_i * 5;
+    printf("%3zd: %10zu %10zu\n",i*scale,hit_histogram[i],miss_histogram[i]);
+  return 0;
 }
